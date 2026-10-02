@@ -15,6 +15,7 @@ import { CanvasContextProvider } from "../context/CanvasContext";
 import SidePanel from "./EditorSidePanel/SidePanel";
 import { DB, State } from "../data/constants";
 import { db } from "../data/db";
+import { diagramApi } from "../api/diagrams";
 import {
   useLayout,
   useSettings,
@@ -140,6 +141,17 @@ export default function WorkSpace({ forcedDiagramId } = {}) {
     ],
   );
 
+  // Same diagram shape as the cloud payload, plus the gist origin that the
+  // server-side store needs in order to resolve `?shareId=` lookups.
+  const buildServerPayload = useCallback(
+    (targetId) => ({
+      ...buildCloudPayload(targetId),
+      lastModified: new Date().toISOString(),
+      loadedFromGistId,
+    }),
+    [buildCloudPayload, loadedFromGistId],
+  );
+
   const save = useCallback(async () => {
     if (searchParams.has("shareId")) {
       searchParams.delete("shareId");
@@ -174,75 +186,28 @@ export default function WorkSpace({ forcedDiagramId } = {}) {
 
     if (isTemplate || (!loadedDiagramId && !isTemplate && !isDiagram)) {
       const diagramId = uuidv4();
-      await db.diagrams
-        .add({
-          diagramId,
-          database: database,
-          name: title,
-          gistId: gistId ?? "",
-          lastModified: new Date(),
-          tables: tables,
-          references: relationships,
-          notes: notes,
-          areas: areas,
-          views: views,
-          pan: transform.pan,
-          zoom: transform.zoom,
-          loadedFromGistId: loadedFromGistId,
-          ...(databases[database].hasEnums && { enums: enums }),
-          ...(databases[database].hasTypes && { types: types }),
-        })
-        .then(() => {
-          navigate(`/editor/diagrams/${diagramId}`, { replace: true });
-          setSaveState(State.SAVED);
-          setLastSaved(new Date().toLocaleString());
-        });
+      await diagramApi.create(buildServerPayload(diagramId));
+      navigate(`/editor/diagrams/${diagramId}`, { replace: true });
+      setSaveState(State.SAVED);
+      setLastSaved(new Date().toLocaleString());
     } else {
-      await db.diagrams
-        .where("diagramId")
-        .equals(loadedDiagramId)
-        .modify({
-          database: database,
-          name: title,
-          lastModified: new Date(),
-          tables: tables,
-          references: relationships,
-          notes: notes,
-          areas: areas,
-          views: views,
-          gistId: gistId ?? "",
-          pan: transform.pan,
-          zoom: transform.zoom,
-          loadedFromGistId: loadedFromGistId,
-          ...(databases[database].hasEnums && { enums: enums }),
-          ...(databases[database].hasTypes && { types: types }),
-        })
-        .then(() => {
-          setSaveState(State.SAVED);
-          setLastSaved(new Date().toLocaleString());
-        });
+      await diagramApi.update(
+        loadedDiagramId,
+        buildServerPayload(loadedDiagramId),
+      );
+      setSaveState(State.SAVED);
+      setLastSaved(new Date().toLocaleString());
     }
   }, [
     cloudOnly,
     diagramSource,
     buildCloudPayload,
+    buildServerPayload,
     extensions,
     searchParams,
     setSearchParams,
-    tables,
-    relationships,
-    notes,
-    areas,
-    views,
-    types,
-    title,
-    transform,
     setSaveState,
     setLastSaved,
-    database,
-    enums,
-    gistId,
-    loadedFromGistId,
     isDiagram,
     isTemplate,
     loadedDiagramId,
@@ -256,7 +221,7 @@ export default function WorkSpace({ forcedDiagramId } = {}) {
       await extensions.cloudSave(buildCloudPayload(loadedDiagramId), {
         isNew: true,
       });
-      await db.diagrams.where("diagramId").equals(loadedDiagramId).delete();
+      await diagramApi.delete(loadedDiagramId);
       setDiagramSource("cloud");
       if (typeof cloudLoad === "function") {
         await cloudLoad(loadedDiagramId);
@@ -287,10 +252,7 @@ export default function WorkSpace({ forcedDiagramId } = {}) {
     loadedIdRef.current = loadedDiagramId ?? null;
 
     const fetchDiagram = async (id) => {
-      const localDiagram = await db.diagrams
-        .where("diagramId")
-        .equals(id)
-        .first();
+      const localDiagram = await diagramApi.get(id);
       if (localDiagram) return { diagram: localDiagram, source: "local" };
 
       if (typeof cloudLoad === "function") {
@@ -336,7 +298,7 @@ export default function WorkSpace({ forcedDiagramId } = {}) {
     const loadLatestDiagram = async () => {
       let diagram;
       try {
-        diagram = await db.diagrams.orderBy("lastModified").last();
+        diagram = await diagramApi.latest();
       } catch (error) {
         console.log(error);
         return;
@@ -421,9 +383,7 @@ export default function WorkSpace({ forcedDiagramId } = {}) {
 
     const shareId = searchParams.get("shareId");
     if (shareId) {
-      const existingDiagram = await db.diagrams.get({
-        loadedFromGistId: shareId,
-      });
+      const existingDiagram = await diagramApi.findByGistId(shareId);
       await loadFromGist(shareId, existingDiagram?.diagramId || null);
       return;
     }

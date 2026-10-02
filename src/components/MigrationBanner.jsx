@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { Toast } from "@douyinfe/semi-ui";
-import { db } from "../data/db";
+import { diagramApi } from "../api/diagrams";
 import { exportSavedData } from "../utils/exportSavedData";
 
 const LEGACY_HOSTS = ["drawdb.vercel.app"];
@@ -60,9 +60,9 @@ export default function MigrationBanner() {
   const exportAll = async () => {
     setExporting(true);
     try {
-      const count = await db.diagrams.count();
+      const count = (await diagramApi.list()).length;
       if (count === 0) {
-        Toast.info("No diagrams are saved in this browser.");
+        Toast.info("No diagrams are saved on this server.");
         return;
       }
       await exportSavedData();

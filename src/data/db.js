@@ -4,17 +4,14 @@ import { templateSeeds } from "./seeds";
 
 export const db = new Dexie("drawDB");
 
-db.version(67)
+// Diagrams now live on the server (see src/api/diagrams.js); IndexedDB only
+// keeps templates. `diagrams: null` drops the old table on upgrade.
+db.version(68)
   .stores({
-    diagrams: "++id, lastModified, loadedFromGistId, diagramId",
+    diagrams: null,
     templates: "++id, custom, templateId",
   })
   .upgrade(async (tx) => {
-    await tx.diagrams.toCollection().modify((diagram) => {
-      if (!diagram.diagramId) {
-        diagram.diagramId = uuidv4();
-      }
-    });
     await tx.templates.toCollection().modify((template) => {
       if (!template.templateId) {
         template.templateId = uuidv4();

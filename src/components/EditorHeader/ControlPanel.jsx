@@ -59,6 +59,7 @@ import {
   viewSchema,
 } from "../../data/schemas";
 import { db } from "../../data/db";
+import { diagramApi } from "../../api/diagrams";
 import {
   useLayout,
   useSettings,
@@ -1145,7 +1146,7 @@ export default function ControlPanel({
       }
     } else {
       try {
-        await db.diagrams.add(diagramData);
+        await diagramApi.create(diagramData);
       } catch (err) {
         console.error(err);
         setSaveState(State.ERROR);
@@ -1271,7 +1272,7 @@ export default function ControlPanel({
             if (typeof extensions.cloudDelete === "function") {
               await extensions.cloudDelete(diagramId);
             } else {
-              await db.diagrams.where("diagramId").equals(diagramId).delete();
+              await diagramApi.delete(diagramId);
             }
             setTitle("Untitled diagram");
             setTables([]);
