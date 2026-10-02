@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
-import { useLiveQuery } from "dexie-react-hooks";
 import { useTranslation } from "react-i18next";
-import { db } from "../../../../../data/db";
+import { diagramApi } from "../../../../../api/diagrams";
 import { useExtensions } from "../../../../../context/ExtensionsContext";
 
 const DISABLED = { loading: false, error: null, items: [] };
@@ -17,10 +16,25 @@ export function useDiagramList() {
   const cloudEnabled = typeof cloudList === "function";
   const currentUserId = extensions?.cloudCurrentUserId ?? null;
 
-  const local = useLiveQuery(() => db.diagrams.toArray(), []);
+  const [local, setLocal] = useState(undefined);
   const [cloud, setCloud] = useState(() =>
     cloudEnabled ? { loading: true, error: null, items: null } : DISABLED,
   );
+
+  useEffect(() => {
+    let cancelled = false;
+    diagramApi
+      .list()
+      .then((items) => {
+        if (!cancelled) setLocal(items);
+      })
+      .catch(() => {
+        if (!cancelled) setLocal([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     if (!cloudEnabled) {
