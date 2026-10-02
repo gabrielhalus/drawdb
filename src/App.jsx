@@ -4,6 +4,8 @@ import Editor from "./pages/Editor";
 import BugReport from "./pages/BugReport";
 import Templates from "./pages/Templates";
 import LandingPage from "./pages/LandingPage";
+import Home from "./pages/Home";
+import CollectionRoute from "./pages/CollectionRoute";
 import SettingsContextProvider from "./context/SettingsContext";
 import NotFound from "./pages/NotFound";
 import MigrationBanner, { isLegacyHost } from "./components/MigrationBanner";
@@ -11,7 +13,9 @@ import MigrationBanner, { isLegacyHost } from "./components/MigrationBanner";
 export default function App() {
   const routes = (
     <Routes>
-      <Route path="/" element={<LandingPage />} />
+      <Route path="/" element={<Home />} />
+      <Route path="/welcome" element={<LandingPage />} />
+      <Route path="/collection" element={<CollectionRoute />} />
       <Route path="/editor" element={<Editor />} />
       <Route path="/editor/diagrams/:id" element={<Editor />} />
       <Route path="/editor/templates/:id" element={<Editor />} />
