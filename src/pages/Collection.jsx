@@ -20,6 +20,7 @@ import {
 import { useTranslation } from "react-i18next";
 import { databases } from "../data/databases";
 import { useSettings, useThemedPage } from "../hooks";
+import UserButton from "../components/Auth/UserButton";
 import logo_light from "../assets/logo_light_160.png";
 import logo_dark from "../assets/logo_dark_160.png";
 
@@ -187,6 +188,7 @@ export default function Collection({ collection }) {
                 {t("new_diagram")}
               </Button>
             </Link>
+            <UserButton size="default" />
           </nav>
         </div>
       </header>

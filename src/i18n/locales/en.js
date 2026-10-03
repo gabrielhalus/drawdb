@@ -429,6 +429,27 @@ const en = {
     sort_recent: "Recently edited",
     sort_name: "Name",
     sort_tables: "Table count",
+    sign_in: "Sign in",
+    sign_up: "Create account",
+    sign_out: "Sign out",
+    sign_in_subtitle: "Sign in to reach your diagrams.",
+    sign_up_subtitle: "Your diagrams are stored on this instance.",
+    sign_in_failed: "Could not sign in. Check your email and password.",
+    sign_up_failed: "Could not create the account.",
+    email: "Email",
+    password: "Password",
+    password_min_length: "At least {{count}} characters.",
+    no_account_yet: "No account yet?",
+    already_have_an_account: "Already have an account?",
+    back_to_sign_in: "Back to sign in",
+    create_owner_account: "Create the owner account",
+    owner_account_subtitle:
+      "The first account owns this instance and takes over any diagram saved before sign-in was required.",
+    instance_needs_owner: "This instance has no account yet.",
+    signups_closed: "Registration is closed",
+    signups_closed_description:
+      "This instance already has an owner and is not accepting new accounts.",
+    signups_closed_hint: "Ask the instance owner for an account.",
   },
 };
 

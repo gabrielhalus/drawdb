@@ -13,6 +13,11 @@ const DEFAULT_STORE_PATH = path.resolve("data/diagrams");
  * Diagrams are kept in the same flat shape the editor already uses (tables,
  * references, notes, areas, ...), so a stored file is a readable, diffable
  * document rather than an opaque blob.
+ *
+ * Every diagram records the `ownerId` of the account that created it, and all
+ * reads take the requesting owner. A diagram belonging to someone else is
+ * reported as absent rather than forbidden, so the API never confirms that an
+ * ID exists in another user's collection.
  */
 export function createDiagramStore(storePath = process.env.DIAGRAM_STORE_PATH) {
   const root = path.resolve(storePath || DEFAULT_STORE_PATH);
@@ -73,53 +78,75 @@ export function createDiagramStore(storePath = process.env.DIAGRAM_STORE_PATH) {
       })
       .filter(Boolean);
 
+  // An owner is always required, and a diagram left without one (saved before
+  // this instance had accounts) matches nobody until it is claimed.
+  const ownedBy = (ownerId) => (diagram) =>
+    Boolean(ownerId) && diagram.ownerId === ownerId;
+
+  const owned = (ownerId) => all().filter(ownedBy(ownerId));
+
   const byNewest = (a, b) =>
     String(b.lastModified ?? "").localeCompare(String(a.lastModified ?? ""));
 
   return {
-    list() {
-      return all().sort(byNewest).map(summarise);
+    list(ownerId) {
+      return owned(ownerId).sort(byNewest).map(summarise);
     },
 
     /** Full records, used by the "export all saved data" flow. */
-    listFull() {
-      return all().sort(byNewest);
+    listFull(ownerId) {
+      return owned(ownerId).sort(byNewest);
     },
 
-    get(id) {
-      return read(id);
+    get(id, ownerId) {
+      const diagram = read(id);
+      return diagram && ownedBy(ownerId)(diagram) ? diagram : null;
     },
 
-    latest() {
-      return all().sort(byNewest)[0] ?? null;
+    latest(ownerId) {
+      return owned(ownerId).sort(byNewest)[0] ?? null;
     },
 
-    findByGistId(gistId) {
+    findByGistId(gistId, ownerId) {
       if (!gistId) return null;
-      return all().find((diagram) => diagram.loadedFromGistId === gistId) ?? null;
+      return (
+        owned(ownerId).find((diagram) => diagram.loadedFromGistId === gistId) ??
+        null
+      );
     },
 
-    create(diagram) {
+    /** True once the ID is taken, whoever owns it, so IDs stay globally unique. */
+    exists(id) {
+      return read(id) !== null;
+    },
+
+    create(diagram, ownerId) {
+      if (!ownerId) throw new Error("An owner is required to create a diagram");
       return write({
         ...diagram,
+        ownerId,
         lastModified: diagram.lastModified ?? new Date().toISOString(),
       });
     },
 
-    update(id, patch) {
+    update(id, patch, ownerId) {
       const current = read(id);
-      if (!current) return null;
+      if (!current || !ownedBy(ownerId)(current)) return null;
       return write({
         ...current,
         ...patch,
+        // Neither identity nor ownership can be reassigned by a save: the
+        // editor sends the whole document back on every autosave.
         diagramId: current.diagramId,
+        ownerId: current.ownerId,
         lastModified: patch.lastModified ?? new Date().toISOString(),
       });
     },
 
-    delete(id) {
+    delete(id, ownerId) {
+      const current = read(id);
+      if (!current || !ownedBy(ownerId)(current)) return false;
       const target = filePath(id);
-      if (!target) return false;
       try {
         fs.unlinkSync(target);
         return true;
@@ -127,6 +154,20 @@ export function createDiagramStore(storePath = process.env.DIAGRAM_STORE_PATH) {
         if (error.code === "ENOENT") return false;
         throw error;
       }
+    },
+
+    /**
+     * Hands every ownerless diagram to `ownerId`, used once when the first
+     * account is created so diagrams stored before authentication existed stay
+     * reachable. Returns how many were adopted.
+     */
+    claimUnowned(ownerId) {
+      if (!ownerId) return 0;
+      const orphans = all().filter((diagram) => !diagram.ownerId);
+      for (const diagram of orphans) {
+        write({ ...diagram, ownerId });
+      }
+      return orphans.length;
     },
   };
 }

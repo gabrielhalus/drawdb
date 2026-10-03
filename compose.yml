@@ -9,6 +9,10 @@ services:
     environment:
       PORT: 3000
       DIAGRAM_STORE_PATH: /data/diagrams
+      AUTH_DB_PATH: /data/auth.db
+      # Set to the public URL once this is reachable over HTTPS, so the session
+      # cookie is marked secure.
+      # AUTH_BASE_URL: https://drawdb.example.com
     volumes:
       - drawdb-data:/data
     networks:

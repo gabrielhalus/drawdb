@@ -13,6 +13,7 @@ import {
   IconShareStroked,
 } from "@douyinfe/semi-icons";
 import { Link, useMatch, useParams } from "react-router-dom";
+import UserButton from "../Auth/UserButton";
 import icon from "../../assets/icon_dark_64.png";
 import {
   Button,
@@ -2031,6 +2032,7 @@ export default function ControlPanel({
                 </Button>
               )}
               <Slot name="header-actions-end" />
+              <UserButton size="default" />
             </div>
           </div>
         )}
