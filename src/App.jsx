@@ -6,19 +6,62 @@ import Templates from "./pages/Templates";
 import LandingPage from "./pages/LandingPage";
 import Home from "./pages/Home";
 import CollectionRoute from "./pages/CollectionRoute";
+import SignIn from "./pages/SignIn";
+import SignUp from "./pages/SignUp";
 import SettingsContextProvider from "./context/SettingsContext";
 import NotFound from "./pages/NotFound";
 import MigrationBanner, { isLegacyHost } from "./components/MigrationBanner";
+import RequireAuth from "./components/Auth/RequireAuth";
 
 export default function App() {
+  // Anything that reads or writes server-stored diagrams needs an account. The
+  // landing page, the templates gallery and the bug report form stay open:
+  // nothing there touches a user's collection.
   const routes = (
     <Routes>
-      <Route path="/" element={<Home />} />
+      <Route
+        path="/"
+        element={
+          <RequireAuth>
+            <Home />
+          </RequireAuth>
+        }
+      />
       <Route path="/welcome" element={<LandingPage />} />
-      <Route path="/collection" element={<CollectionRoute />} />
-      <Route path="/editor" element={<Editor />} />
-      <Route path="/editor/diagrams/:id" element={<Editor />} />
-      <Route path="/editor/templates/:id" element={<Editor />} />
+      <Route path="/sign-in" element={<SignIn />} />
+      <Route path="/sign-up" element={<SignUp />} />
+      <Route
+        path="/collection"
+        element={
+          <RequireAuth>
+            <CollectionRoute />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/editor"
+        element={
+          <RequireAuth>
+            <Editor />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/editor/diagrams/:id"
+        element={
+          <RequireAuth>
+            <Editor />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/editor/templates/:id"
+        element={
+          <RequireAuth>
+            <Editor />
+          </RequireAuth>
+        }
+      />
       <Route path="/bug-report" element={<BugReport />} />
       <Route path="/templates" element={<Templates />} />
       <Route path="*" element={<NotFound />} />

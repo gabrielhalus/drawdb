@@ -25,12 +25,17 @@ DrawDB is a robust and user-friendly database entity relationship diagram (ERD) 
 
 ### Local Development
 
+Requires Node 24 or newer, for the built-in `node:sqlite` module backing the
+account database.
+
 ```bash
 git clone https://github.com/drawdb-io/drawdb
 cd drawdb
 npm install
 npm run dev
 ```
+
+Then open the app and create the first account, which owns the instance.
 
 ### Build
 
@@ -67,8 +72,10 @@ file and are then renamed into place, so an interrupted write cannot truncate an
 existing diagram.
 
 `npm run dev` starts the API on port `3000` and the Vite frontend on `5173`
-together; use `npm run dev:client` or `npm run dev:server` to run just one.
-`npm start` serves the built frontend and the API from a single process.
+together; use `npm run dev:client` or `npm run dev:server` to run just one. The
+dev server proxies `/api` to the API so both share an origin, which is what lets
+the session cookie travel with every request. `npm start` serves the built
+frontend and the API from a single process.
 
 The application exposes:
 
@@ -76,6 +83,47 @@ The application exposes:
 - `GET|PUT|DELETE /api/diagrams/:diagramId`
 - `GET /api/diagrams/latest`
 - `GET /api/diagrams/by-gist/:gistId`
+- `GET /api/instance`
+- `ALL /api/auth/*` (handled by Better Auth)
+
+Every `/api/diagrams` route requires a session and only ever sees the signed-in
+account's own diagrams.
+
+## Accounts
+
+Diagrams are private per account, so the instance needs sign-in. Authentication
+is handled by [Better Auth](https://better-auth.com) running inside this server
+— there is no third-party service and no account to create anywhere else.
+Accounts and sessions live in a SQLite file (`AUTH_DB_PATH`, default
+`./data/auth.db`) through Node's built-in `node:sqlite`, which is why **Node 24
+or newer is required** and why there is still no native dependency to build.
+
+Diagrams themselves stay plain JSON files; each one simply records the
+`ownerId` of the account that created it.
+
+### First run
+
+The first account to register owns the instance, and **registration closes as
+soon as it exists**. Open the app, create that account, and the sign-up form
+turns into "ask the owner for an account" for everybody else. Set
+`ALLOW_SIGNUP=true` to keep registration open.
+
+Upgrading an instance that already held diagrams needs nothing: diagrams saved
+before sign-in was required have no owner yet, and the first account created
+adopts all of them.
+
+### Configuration
+
+| Variable | Purpose |
+| --- | --- |
+| `AUTH_DB_PATH` | SQLite file holding accounts and sessions. Defaults to `./data/auth.db`. |
+| `AUTH_BASE_URL` | Public URL of the instance. **Set this in production**: its scheme is what marks the session cookie secure over HTTPS. |
+| `AUTH_TRUSTED_ORIGINS` | Extra comma-separated origins allowed to call the API. Only needed behind a reverse proxy that rewrites `Host`; same-origin requests are always accepted. |
+| `BETTER_AUTH_SECRET` | Signs session cookies. Generated once into `./data/auth.secret` when unset, so sessions survive a restart with no configuration. Set it explicitly to share one value across several instances. |
+| `ALLOW_SIGNUP` | `true` keeps registration open after the first account exists. |
+
+Keep the `/data` volume: losing `auth.db` loses the accounts, and losing
+`auth.secret` signs everyone out.
 
 ### Home page
 
@@ -83,6 +131,10 @@ The home page adapts to what is stored: with no saved diagrams it shows the
 landing page, and as soon as one exists it becomes the diagram collection. The
 landing page stays permanently available at `/welcome`, and the collection at
 `/collection`.
+
+`/`, `/collection` and `/editor/*` require a session and send visitors to
+`/sign-in` otherwise. `/welcome`, `/templates` and `/bug-report` stay open —
+nothing there reads a user's collection.
 
 If you want to enable sharing, set up the [server](https://github.com/drawdb-io/drawdb-server) and environment variables according to `.env.sample`. This is optional unless you need to share files.
 

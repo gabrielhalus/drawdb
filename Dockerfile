@@ -1,5 +1,5 @@
 # Stage 1: Build the app
-FROM node:20-alpine AS build
+FROM node:24-alpine AS build
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci
@@ -7,9 +7,12 @@ COPY . .
 ENV NODE_OPTIONS="--max-old-space-size=4096"
 RUN npm run build
 
-# Stage 2: Run the Node server, which serves the built frontend and the
-# diagram API backed by file storage.
-FROM node:20-alpine AS production
+# Stage 2: Run the Node server, which serves the built frontend, the diagram API
+# backed by file storage, and the accounts guarding it.
+#
+# Node 24 is required: the account database runs on the built-in `node:sqlite`
+# module, which is what keeps this image free of any native build step.
+FROM node:24-alpine AS production
 WORKDIR /app
 ENV NODE_ENV=production
 COPY package*.json ./
@@ -32,7 +35,8 @@ RUN chmod +x /app/entrypoint.sh
 ENV VITE_BACKEND_URL="" \
     VITE_GIST_BACKEND_URL="" \
     PORT=3000 \
-    DIAGRAM_STORE_PATH=/data/diagrams
+    DIAGRAM_STORE_PATH=/data/diagrams \
+    AUTH_DB_PATH=/data/auth.db
 
 EXPOSE 3000
 CMD ["/app/entrypoint.sh"]

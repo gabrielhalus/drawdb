@@ -16,3 +16,5 @@ export { default as useThemedPage } from "./useThemedPage";
 export { default as useNavigateWithParams } from "./useNavigateWithParams";
 export { default as useCollab } from "./useCollab";
 export { default as useDiagramCollection } from "./useDiagramCollection";
+export { default as useAuth } from "./useAuth";
+export { default as useInstanceInfo } from "./useInstanceInfo";

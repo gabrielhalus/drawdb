@@ -3,13 +3,16 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
   "scripts": {
     "dev": "concurrently --kill-others --names server,client --prefix-colors blue,green \"npm:dev:server\" \"npm:dev:client\"",
     "dev:client": "vite",
     "dev:server": "node --watch server/index.js",
     "start": "node server/index.js",
     "build": "vite build",
-    "check:server": "node --check server/index.js && node --check server/fileStore.js && node --check server/protocol.js",
+    "check:server": "node --check server/index.js && node --check server/auth.js && node --check server/fileStore.js && node --check server/protocol.js",
     "test:server": "node --test server/server.test.js",
     "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview"
@@ -25,6 +28,7 @@
     "@monaco-editor/react": "^4.7.0",
     "@vercel/analytics": "^1.2.2",
     "axios": "^1.18.0",
+    "better-auth": "^1.7.7",
     "dexie": "^3.2.4",
     "dexie-react-hooks": "^1.1.7",
     "express": "^5.2.1",
